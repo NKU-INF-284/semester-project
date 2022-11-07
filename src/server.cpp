@@ -24,12 +24,7 @@
 #define MAXDATASIZE 256  // max number of bytes we can get at once
 #define BACKLOG 10       // how many pending connections queue will hold
 
-Server::Server() {
-    this->servinfo = get_address_info();
-    this->sockfd = get_socket_file_descriptor();
-}
-
-Server::~Server() { freeaddrinfo(this->servinfo); }
+Server::Server() { this->sockfd = get_socket_file_descriptor(); }
 
 /**
  *Taken from Beej's Guide to Network Programming
@@ -81,14 +76,16 @@ struct addrinfo *Server::get_address_info() {
 }
 
 int Server::get_socket_file_descriptor() {
-    int sockfd;
-    struct addrinfo *p;
+    struct addrinfo *servinfo = get_address_info();
 
     /**
      * Bind the socket to a file descriptor
      * (Note this is still mostly taken from Beej
      * (https://beej.us/guide/bgnet/examples/))
      */
+    int sockfd;
+    struct addrinfo *p;
+
     // traverse linked list starting at servinfo
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) ==
@@ -140,7 +137,7 @@ int Server::get_socket_file_descriptor() {
 void Server::start() {
     /**
      * Forever, accept connections
-     * Taken from https://beej.us/guide/bgnet/examples/server.c
+     * Inspired by https://beej.us/guide/bgnet/examples/server.c
      */
     while (true) {                           // main accept() loop
         struct sockaddr_storage their_addr;  // connector's address information

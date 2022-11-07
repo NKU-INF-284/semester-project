@@ -30,7 +30,7 @@ void *get_in_addr(struct sockaddr *sa) {
     return &(((struct sockaddr_in6 *)sa)->sin6_addr);
 }
 
-int main(void) {
+struct addrinfo *get_address_info() {
     /**
      * Get address info:
      * (Note this is still mostly taken from Beej
@@ -46,18 +46,21 @@ int main(void) {
     int rv = getaddrinfo(NULL, PORT, &hints, &servinfo);
     if (rv != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
+        exit(1);
     }
+    return servinfo;
+}
+
+int get_socket_file_descriptor(struct addrinfo *servinfo) {
+    int sockfd;
+    struct addrinfo *p;
 
     /**
      * Bind the socket to a file descriptor
      * (Note this is still mostly taken from Beej
      * (https://beej.us/guide/bgnet/examples/))
      */
-    int sockfd;
-    struct addrinfo *p;
-    struct sigaction sa;
-
+    // traverse linked list starting at servinfo
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) ==
             -1) {
@@ -93,6 +96,7 @@ int main(void) {
         exit(1);
     }
 
+    struct sigaction sa;
     sa.sa_handler = sigchld_handler;  // reap all dead processes
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
@@ -101,8 +105,10 @@ int main(void) {
         exit(1);
     }
 
-    printf("server: waiting for connections...\n");
+    return sockfd;
+}
 
+void start(int sockfd) {
     /**
      * Forever, accept connections
      * Taken from https://beej.us/guide/bgnet/examples/server.c
@@ -162,6 +168,15 @@ int main(void) {
             close(new_fd);
         }
     }
+}
+
+int main(void) {
+    struct addrinfo *servinfo = get_address_info();
+    int sockfd = get_socket_file_descriptor(servinfo);
+
+    std::cout << "server: waiting for connections on port " << PORT << "...\n";
+
+    start(sockfd);
 
     return 0;
 }

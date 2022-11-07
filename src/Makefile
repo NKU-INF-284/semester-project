@@ -1,11 +1,12 @@
 OUTFILE=server.out
 OPTS=-Wall -Wpedantic -Wextra
+FILES=main.cpp server.cpp
 
 main:
-	g++ main.cpp -o $(OUTFILE) $(OPTS) 
+	g++ $(FILES) -o $(OUTFILE) $(OPTS) 
 
-run:
-	g++ main.cpp -o $(OUTFILE) $(OPTS) && ./server.out
+run: main
+	./server.out
 
 clean:
 	rm -f $(OUTFILE)

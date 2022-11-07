@@ -1,25 +1,15 @@
+#ifndef SERVER_H
+#define SERVER_H
+
 #include <iostream>
 
 /**
- * Combined from https://beej.us/guide/bgnet/examples/
- * These are mostly unused, so far
+ * Function declarations
  */
-#include <arpa/inet.h>
-#include <errno.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
+void sigchld_handler(int);
+void *get_in_addr(struct sockaddr *);
+struct addrinfo *get_address_info();
+int get_socket_file_descriptor(struct addrinfo *);
+void start(int);
 
-/**
- * Defines for configuration
- */
-#define PORT "3490"      // the port users will be connecting to
-#define MAXDATASIZE 256  // max number of bytes we can get at once
-#define BACKLOG 10       // how many pending connections queue will hold
+#endif

@@ -2,6 +2,8 @@
  * Combined from https://beej.us/guide/bgnet/examples/
  * These are mostly unused, so far
  */
+#include "server.hpp"
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -21,6 +23,13 @@
 #define PORT "3490"      // the port users will be connecting to
 #define MAXDATASIZE 256  // max number of bytes we can get at once
 #define BACKLOG 10       // how many pending connections queue will hold
+
+Server::Server() {
+    this->servinfo = get_address_info();
+    this->sockfd = get_socket_file_descriptor();
+}
+
+Server::~Server() { freeaddrinfo(this->servinfo); }
 
 /**
  *Taken from Beej's Guide to Network Programming
@@ -42,7 +51,7 @@ void sigchld_handler(int s) {
  *Taken from Beej's Guide to Network Programming
  * https://beej.us/guide/bgnet/examples/server.c
  */
-void *get_in_addr(struct sockaddr *sa) {
+void *Server::get_in_addr(struct sockaddr *sa) {
     if (sa->sa_family == AF_INET) {
         return &(((struct sockaddr_in *)sa)->sin_addr);
     }
@@ -50,7 +59,7 @@ void *get_in_addr(struct sockaddr *sa) {
     return &(((struct sockaddr_in6 *)sa)->sin6_addr);
 }
 
-struct addrinfo *get_address_info() {
+struct addrinfo *Server::get_address_info() {
     /**
      * Get address info:
      * (Note this is still mostly taken from Beej
@@ -71,7 +80,7 @@ struct addrinfo *get_address_info() {
     return servinfo;
 }
 
-int get_socket_file_descriptor(struct addrinfo *servinfo) {
+int Server::get_socket_file_descriptor() {
     int sockfd;
     struct addrinfo *p;
 
@@ -128,7 +137,7 @@ int get_socket_file_descriptor(struct addrinfo *servinfo) {
     return sockfd;
 }
 
-void start(int sockfd) {
+void Server::start() {
     /**
      * Forever, accept connections
      * Taken from https://beej.us/guide/bgnet/examples/server.c
@@ -136,7 +145,8 @@ void start(int sockfd) {
     while (true) {                           // main accept() loop
         struct sockaddr_storage their_addr;  // connector's address information
         socklen_t sin_size = sizeof their_addr;
-        int new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+        int new_fd =
+            accept(this->sockfd, (struct sockaddr *)&their_addr, &sin_size);
         if (new_fd == -1) {
             perror("accept");
             continue;
@@ -148,8 +158,8 @@ void start(int sockfd) {
 
         printf("server: got connection from %s\n", s);
 
-        if (!fork()) {      // this is the child process
-            close(sockfd);  // child doesn't need the listener
+        if (!fork()) {            // this is the child process
+            close(this->sockfd);  // child doesn't need the listener
 
             while (true) {  // recieve packets from client until the
                             // connection is closed

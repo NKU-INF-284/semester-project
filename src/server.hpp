@@ -3,13 +3,18 @@
 
 #include <iostream>
 
-/**
- * Function declarations
- */
 void sigchld_handler(int);
-void *get_in_addr(struct sockaddr *);
-struct addrinfo *get_address_info();
-int get_socket_file_descriptor(struct addrinfo *);
-void start(int);
+
+class Server {
+   public:
+    struct addrinfo *servinfo;
+    int sockfd;
+    Server();
+    ~Server();
+    void start();
+    void *get_in_addr(struct sockaddr *);
+    struct addrinfo *get_address_info();
+    int get_socket_file_descriptor();
+};
 
 #endif

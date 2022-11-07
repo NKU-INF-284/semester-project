@@ -158,39 +158,11 @@ void Server::start() {
 
         printf("server: got connection from %s\n", s);
 
-        if (!fork()) {            // this is the child process
+        if (!fork()) {  // spawn a child process to not block the main loop
             close(this->sockfd);  // child doesn't need the listener
 
-            while (true) {  // recieve packets from client until the
-                            // connection is closed
-                char buf[MAXDATASIZE];
-                int numbytes = recv(new_fd, buf, MAXDATASIZE - 1, 0);
-
-                if (numbytes == -1) {
-                    perror("recv");
-                    exit(1);
-                } else if (numbytes == 0) {
-                    break;  // client has closed the connection
-                }
-
-                buf[numbytes] = '\0';  // null terminate the buffer
-
-                int bytes_to_send = numbytes;
-                int send_res;
-
-                // This was written by me
-                send_res = send(new_fd, buf, bytes_to_send, 0);
-                if (send_res == -1) {
-                    perror("send");
-                } else if (send_res < bytes_to_send) {
-                    fprintf(stderr,
-                            "could not send all bytes of message. sent %d/%d\n",
-                            send_res, bytes_to_send);
-                    fprintf(stderr, "TODO: Handle unfinished send\n");
-                }
-
-                printf("server: received '%s'\n", buf);
-            }
+            while (recieve_from_fd(new_fd))
+                ;  // recieve packets from client
 
             close(new_fd);
             exit(0);
@@ -198,4 +170,33 @@ void Server::start() {
             close(new_fd);
         }
     }
+}
+
+/**
+ * returns true when there is more data to recieve
+ */
+bool Server::recieve_from_fd(int new_fd) {
+    char buf[MAXDATASIZE];
+    int bytes_to_send = recv(new_fd, buf, MAXDATASIZE - 1, 0);
+
+    if (bytes_to_send == -1) {
+        perror("recv");
+        exit(1);
+    } else if (bytes_to_send == 0) {
+        return false;  // client has closed the connection
+    }
+
+    buf[bytes_to_send] = '\0';  // null terminate the buffer
+
+    int send_res = send(new_fd, buf, bytes_to_send, 0);
+    if (send_res == -1) {
+        perror("send");
+    } else if (send_res < bytes_to_send) {
+        fprintf(stderr, "could not send all bytes of message. sent %d/%d\n",
+                send_res, bytes_to_send);
+        fprintf(stderr, "TODO: Handle unfinished send\n");
+    }
+
+    printf("server: received '%s'\n", buf);
+    return true;
 }

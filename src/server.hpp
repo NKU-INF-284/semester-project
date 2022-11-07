@@ -17,6 +17,7 @@ class Server {
     void *get_in_addr(struct sockaddr *);
     struct addrinfo *get_address_info();
     int get_socket_file_descriptor();
+    bool recieve_from_fd(int);
 };
 
 #endif

@@ -1,9 +1,9 @@
+#include "server.hpp"
+
 /**
  * Combined from https://beej.us/guide/bgnet/examples/
  * These are mostly unused, so far
  */
-#include "server.hpp"
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>

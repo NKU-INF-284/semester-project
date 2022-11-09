@@ -5,15 +5,13 @@
  * These are mostly unused, so far
  */
 #include <arpa/inet.h>
-#include <errno.h>
+#include <cerrno>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -36,7 +34,7 @@ void sigchld_handler(int s) {
     // waitpid() might overwrite errno, so we save and restore it:
     int saved_errno = errno;
 
-    while (waitpid(-1, NULL, WNOHANG) > 0);
+    while (waitpid(-1, nullptr, WNOHANG) > 0);
 
     errno = saved_errno;
 }
@@ -59,14 +57,14 @@ struct addrinfo *Server::get_address_info() {
      * (Note this is still mostly taken from Beej
      * (https://beej.us/guide/bgnet/examples/))
      */
-    struct addrinfo hints;
+    struct addrinfo hints{};
     struct addrinfo *servinfo;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    int rv = getaddrinfo(NULL, PORT, &hints, &servinfo);
+    int rv = getaddrinfo(nullptr, PORT, &hints, &servinfo);
     if (rv != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         exit(1);
@@ -86,7 +84,7 @@ int Server::get_socket_file_descriptor() {
     struct addrinfo *p;
 
     // traverse linked list starting at servinfo
-    for (p = servinfo; p != NULL; p = p->ai_next) {
+    for (p = servinfo; p != nullptr; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) ==
             -1) {
             perror("server: socket");
@@ -111,7 +109,7 @@ int Server::get_socket_file_descriptor() {
 
     freeaddrinfo(servinfo);  // all done with this structure
 
-    if (p == NULL) {
+    if (p == nullptr) {
         fprintf(stderr, "server: failed to bind\n");
         exit(1);
     }
@@ -121,11 +119,11 @@ int Server::get_socket_file_descriptor() {
         exit(1);
     }
 
-    struct sigaction sa;
+    struct sigaction sa{};
     sa.sa_handler = sigchld_handler;  // reap all dead processes
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+    if (sigaction(SIGCHLD, &sa, nullptr) == -1) {
         perror("sigaction");
         exit(1);
     }
@@ -159,7 +157,7 @@ void Server::start() {
     }
 }
 
-int Server::accept_connection() {
+int Server::accept_connection() const {
     struct sockaddr_storage their_addr{};  // connector's address information
     socklen_t sin_size = sizeof their_addr;
     int new_fd = accept(this->sockfd, (struct sockaddr *) &their_addr, &sin_size);
@@ -177,7 +175,7 @@ int Server::accept_connection() {
  */
 bool Server::receive_from_fd(int new_fd) {
     char buf[MAXDATASIZE];
-    int bytes_to_send = recv(new_fd, buf, MAXDATASIZE - 1, 0);
+    auto bytes_to_send = recv(new_fd, buf, MAXDATASIZE - 1, 0);
 
     if (bytes_to_send == -1) {
         perror("recv");
@@ -187,11 +185,11 @@ bool Server::receive_from_fd(int new_fd) {
     } else {
         buf[bytes_to_send] = '\0';  // null terminate the buffer
 
-        int send_res = send(new_fd, buf, bytes_to_send, 0);
+        auto send_res = send(new_fd, buf, bytes_to_send, 0);
         if (send_res == -1) {
             perror("send");
         } else if (send_res < bytes_to_send) {
-            fprintf(stderr, "could not send all bytes of message. sent %d/%d\n",
+            fprintf(stderr, "could not send all bytes of message. sent %ld/%ld\n",
                     send_res, bytes_to_send);
             fprintf(stderr, "TODO: Handle unfinished send\n");
         }

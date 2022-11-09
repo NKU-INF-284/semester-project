@@ -12,11 +12,11 @@ class Server {
 
    private:
     int sockfd;
-    void *get_in_addr(struct sockaddr *);
-    struct addrinfo *get_address_info();
-    int get_socket_file_descriptor();
+    static void *get_in_addr(struct sockaddr *);
+    static struct addrinfo *get_address_info();
+    static int get_socket_file_descriptor();
     static bool receive_from_fd(int);
-    int accept_connection();
+    int accept_connection() const;
 };
 
 #endif

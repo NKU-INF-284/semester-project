@@ -31,13 +31,12 @@ Server::Server() { this->sockfd = get_socket_file_descriptor(); }
  * https://beej.us/guide/bgnet/examples/server.c
  */
 void sigchld_handler(int s) {
-    (void)s;  // quiet unused variable warning
+    (void) s;  // quiet unused variable warning
 
     // waitpid() might overwrite errno, so we save and restore it:
     int saved_errno = errno;
 
-    while (waitpid(-1, NULL, WNOHANG) > 0)
-        ;
+    while (waitpid(-1, NULL, WNOHANG) > 0);
 
     errno = saved_errno;
 }
@@ -48,10 +47,10 @@ void sigchld_handler(int s) {
  */
 void *Server::get_in_addr(struct sockaddr *sa) {
     if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in *)sa)->sin_addr);
+        return &(((struct sockaddr_in *) sa)->sin_addr);
     }
 
-    return &(((struct sockaddr_in6 *)sa)->sin6_addr);
+    return &(((struct sockaddr_in6 *) sa)->sin6_addr);
 }
 
 struct addrinfo *Server::get_address_info() {
@@ -139,27 +138,18 @@ void Server::start() {
      * Forever, accept connections
      * Inspired by https://beej.us/guide/bgnet/examples/server.c
      */
-    while (true) {                           // main accept() loop
-        struct sockaddr_storage their_addr;  // connector's address information
-        socklen_t sin_size = sizeof their_addr;
-        int new_fd =
-            accept(this->sockfd, (struct sockaddr *)&their_addr, &sin_size);
+    while (true) {  // main accept() loop
+        std::cout << "server: waiting for connections...\n";
+        int new_fd = accept_connection();
         if (new_fd == -1) {
             perror("accept");
             continue;
         }
 
-        char s[INET6_ADDRSTRLEN];
-        inet_ntop(their_addr.ss_family,
-                  get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
-
-        printf("server: got connection from %s\n", s);
-
         if (!fork()) {  // spawn a child process to not block the main loop
             close(this->sockfd);  // child doesn't need the listener
 
-            while (recieve_from_fd(new_fd))
-                ;  // recieve packets from client
+            while (receive_from_fd(new_fd));  // receive packets from client
 
             close(new_fd);
             exit(0);
@@ -169,10 +159,23 @@ void Server::start() {
     }
 }
 
+int Server::accept_connection() {
+    struct sockaddr_storage their_addr{};  // connector's address information
+    socklen_t sin_size = sizeof their_addr;
+    int new_fd = accept(this->sockfd, (struct sockaddr *) &their_addr, &sin_size);
+
+    char s[INET6_ADDRSTRLEN];
+    inet_ntop(their_addr.ss_family,
+              get_in_addr((struct sockaddr *) &their_addr), s, sizeof s);
+
+    printf("server: got connection from %s\n", s);
+    return new_fd;
+}
+
 /**
- * returns true when there is more data to recieve
+ * returns true when there is more data to receive
  */
-bool Server::recieve_from_fd(int new_fd) {
+bool Server::receive_from_fd(int new_fd) {
     char buf[MAXDATASIZE];
     int bytes_to_send = recv(new_fd, buf, MAXDATASIZE - 1, 0);
 
@@ -181,19 +184,19 @@ bool Server::recieve_from_fd(int new_fd) {
         exit(1);
     } else if (bytes_to_send == 0) {
         return false;  // client has closed the connection
+    } else {
+        buf[bytes_to_send] = '\0';  // null terminate the buffer
+
+        int send_res = send(new_fd, buf, bytes_to_send, 0);
+        if (send_res == -1) {
+            perror("send");
+        } else if (send_res < bytes_to_send) {
+            fprintf(stderr, "could not send all bytes of message. sent %d/%d\n",
+                    send_res, bytes_to_send);
+            fprintf(stderr, "TODO: Handle unfinished send\n");
+        }
+
+        printf("server: received '%s'\n", buf);
+        return true;
     }
-
-    buf[bytes_to_send] = '\0';  // null terminate the buffer
-
-    int send_res = send(new_fd, buf, bytes_to_send, 0);
-    if (send_res == -1) {
-        perror("send");
-    } else if (send_res < bytes_to_send) {
-        fprintf(stderr, "could not send all bytes of message. sent %d/%d\n",
-                send_res, bytes_to_send);
-        fprintf(stderr, "TODO: Handle unfinished send\n");
-    }
-
-    printf("server: received '%s'\n", buf);
-    return true;
 }

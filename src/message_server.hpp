@@ -7,6 +7,7 @@
 
 
 #include <unordered_set>
+#include <mutex>
 #include "server.hpp"
 
 class MessageServer : public Server {
@@ -14,11 +15,12 @@ public:
     void on_connection(int) override;
 
 private:
-    static bool receive_from_fd(int);
+    bool handle_connection(int);
     static void send_message_to_fd(const std::string &message, int fd);
+    static bool send_buffer(int fd, const char *buf, size_t bytes_to_send);
 
     std::unordered_set<int> connections;
-    // TODO: add mutex
+    std::mutex connections_mutex;
 };
 
 

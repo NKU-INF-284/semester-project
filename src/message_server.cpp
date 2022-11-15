@@ -18,11 +18,18 @@
 void MessageServer::on_connection(int fd) {
     std::cout << "Connected!!!\n";
 
-    send_message_to_fd("Welcome to Zack's Server!", fd);
+    connections_mutex.lock();
+    connections.insert(fd);
+    connections_mutex.unlock();
+    send_message_to_fd("Welcome to Zack's Server!\n", fd);
 
-    std::thread t([fd]() {
-        while (receive_from_fd(fd));  // receive packets from client
+    std::thread t([this, fd]() {
+        while (handle_connection(fd));  // receive packets from client
 
+        connections_mutex.lock();
+        std::cout << "client '" << fd << "' has closed the connection.\n";
+        connections.erase(fd);
+        connections_mutex.unlock();
         close(fd);
     });
     t.detach();
@@ -33,7 +40,7 @@ void MessageServer::on_connection(int fd) {
 /**
  * returns true when there is more data to receive
  */
-bool MessageServer::receive_from_fd(int fd) {
+bool MessageServer::handle_connection(int fd) {
     char buf[MAXDATASIZE];
     auto bytes_to_send = recv(fd, buf, MAXDATASIZE - 1, 0);
 
@@ -45,30 +52,36 @@ bool MessageServer::receive_from_fd(int fd) {
     } else {
         buf[bytes_to_send] = '\0';  // null terminate the buffer
 
-        auto send_res = send(fd, buf, bytes_to_send, 0);
-        if (send_res == -1) {
-            perror("send");
-        } else if (send_res < bytes_to_send) {
-            fprintf(stderr, "could not send all bytes of message. sent %ld/%ld\n",
-                    send_res, bytes_to_send);
-            fprintf(stderr, "TODO: Handle unfinished send\n");
-            return false;
+        connections_mutex.lock();
+        bool res;
+        for (int conn: connections) {
+            res = send_buffer(conn, buf, bytes_to_send);
+            std::cout << "sent to '" << conn << "'\n";
         }
-
         printf("server: received '%s'\n", buf);
-        return true;
+        connections_mutex.unlock();
+        return res;
     }
 }
 
 void MessageServer::send_message_to_fd(const std::string &message, int fd) {
-    auto bytes_to_send = message.size();
-    auto send_res = send(fd, message.data(), bytes_to_send, 0);
+    send_buffer(fd, message.data(), message.size());
+}
+
+/**
+ * @return true when connection should continue, false otherwise
+ */
+bool MessageServer::send_buffer(int fd, const char *buf, size_t bytes_to_send) {
+    auto send_res = send(fd, buf, bytes_to_send, 0);
     if (send_res == -1) {
         perror("send");
+        return false;
     } else if (send_res < bytes_to_send) {
         fprintf(stderr, "could not send all bytes of message. sent %ld/%ld\n",
                 send_res, bytes_to_send);
         fprintf(stderr, "TODO: Handle unfinished send\n");
+        return false;
     }
+    return true;
 }
 

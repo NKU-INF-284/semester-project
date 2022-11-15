@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <thread>
 
 #include "message_server.hpp"
 
@@ -19,16 +20,14 @@ void MessageServer::on_connection(int fd) {
 
     send_message_to_fd("Welcome to Zack's Server!", fd);
 
-    if (!fork()) {  // spawn a child process to not block the main loop
-        close(this->sockfd);  // child doesn't need the listener
-
+    std::thread t([fd]() {
         while (receive_from_fd(fd));  // receive packets from client
 
         close(fd);
-        exit(0);
-    } else {
-        close(fd);
-    }
+    });
+    t.detach();
+    // `t` will either die when the connection is closed,
+    // or when the server is killed.
 }
 
 /**
@@ -61,7 +60,7 @@ bool MessageServer::receive_from_fd(int fd) {
     }
 }
 
-void MessageServer::send_message_to_fd(const std::string& message, int fd) {
+void MessageServer::send_message_to_fd(const std::string &message, int fd) {
     auto bytes_to_send = message.size();
     auto send_res = send(fd, message.data(), bytes_to_send, 0);
     if (send_res == -1) {

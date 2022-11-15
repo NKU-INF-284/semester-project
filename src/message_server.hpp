@@ -6,6 +6,7 @@
 #define SEMESTER_PROJECT_MESSAGE_SERVER_HPP
 
 
+#include <unordered_set>
 #include "server.hpp"
 
 class MessageServer : public Server {
@@ -15,6 +16,9 @@ public:
 private:
     static bool receive_from_fd(int);
     static void send_message_to_fd(const std::string &message, int fd);
+
+    std::unordered_set<int> connections;
+    // TODO: add mutex
 };
 
 

@@ -130,7 +130,7 @@ int Server::get_socket_file_descriptor() {
     return sockfd;
 }
 
-void Server::start() {
+[[noreturn]] void Server::start() {
     /**
      * Forever, accept connections
      * Inspired by https://beej.us/guide/bgnet/examples/server.c

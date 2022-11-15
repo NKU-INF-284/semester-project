@@ -9,7 +9,7 @@ class Server {
 public:
     Server();
 
-    virtual void start();
+    [[noreturn]] virtual void start();
 
     virtual void on_connection(int);
 

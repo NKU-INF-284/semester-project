@@ -136,7 +136,7 @@ void Server::start() {
      * Inspired by https://beej.us/guide/bgnet/examples/server.c
      */
     while (true) {  // main accept() loop
-        std::cout << "server: waiting for connections...\n";
+        std::cout << "server: waiting for connections on port " PORT "...\n";
         int new_fd = accept_connection();
         if (new_fd == -1) {
             perror("accept");

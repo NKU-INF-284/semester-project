@@ -1,9 +1,7 @@
-#include <iostream>
-
-#include "echo_server.hpp"
+#include "message_server.hpp"
 
 int main() {
-    EchoServer server;
+    MessageServer server;
     server.start();
 
     return 0;

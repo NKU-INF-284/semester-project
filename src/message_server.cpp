@@ -5,16 +5,19 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "echo_server.hpp"
+#include "message_server.hpp"
 
 #define MAXDATASIZE 256  // max number of bytes we can get at once
 
-void EchoServer::on_connection(int fd) {
-    std::cout << "Connected!\n";
+void MessageServer::on_connection(int fd) {
+    std::cout << "Connected!!!\n";
+
+    send_message_to_fd("Welcome to Zack's Server!", fd);
 
     if (!fork()) {  // spawn a child process to not block the main loop
         close(this->sockfd);  // child doesn't need the listener
@@ -31,7 +34,7 @@ void EchoServer::on_connection(int fd) {
 /**
  * returns true when there is more data to receive
  */
-bool EchoServer::receive_from_fd(int fd) {
+bool MessageServer::receive_from_fd(int fd) {
     char buf[MAXDATASIZE];
     auto bytes_to_send = recv(fd, buf, MAXDATASIZE - 1, 0);
 
@@ -55,6 +58,18 @@ bool EchoServer::receive_from_fd(int fd) {
 
         printf("server: received '%s'\n", buf);
         return true;
+    }
+}
+
+void MessageServer::send_message_to_fd(const std::string& message, int fd) {
+    auto bytes_to_send = message.size();
+    auto send_res = send(fd, message.data(), bytes_to_send, 0);
+    if (send_res == -1) {
+        perror("send");
+    } else if (send_res < bytes_to_send) {
+        fprintf(stderr, "could not send all bytes of message. sent %ld/%ld\n",
+                send_res, bytes_to_send);
+        fprintf(stderr, "TODO: Handle unfinished send\n");
     }
 }
 

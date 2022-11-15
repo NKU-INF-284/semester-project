@@ -6,16 +6,23 @@
 void sigchld_handler(int);
 
 class Server {
-   public:
+public:
     Server();
-    void start();
 
-   private:
+    virtual void start();
+
+    virtual void on_connection(int);
+
+protected:
     int sockfd;
+
     static void *get_in_addr(struct sockaddr *);
+
     static struct addrinfo *get_address_info();
+
     static int get_socket_file_descriptor();
-    static bool receive_from_fd(int);
+
+
     int accept_connection() const;
 };
 

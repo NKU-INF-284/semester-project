@@ -8,4 +8,4 @@ include_directories(src)
 add_executable(semester_project
         src/main.cpp
         src/server.cpp
-        src/server.hpp)
+        src/server.hpp src/echo_server.cpp src/echo_server.hpp)

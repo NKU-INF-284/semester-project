@@ -19,7 +19,6 @@
  * Defines for configuration
  */
 #define PORT "3490"      // the port users will be connecting to
-#define MAXDATASIZE 256  // max number of bytes we can get at once
 #define BACKLOG 10       // how many pending connections queue will hold
 
 Server::Server() { this->sockfd = get_socket_file_descriptor(); }
@@ -144,16 +143,7 @@ void Server::start() {
             continue;
         }
 
-        if (!fork()) {  // spawn a child process to not block the main loop
-            close(this->sockfd);  // child doesn't need the listener
-
-            while (receive_from_fd(new_fd));  // receive packets from client
-
-            close(new_fd);
-            exit(0);
-        } else {
-            close(new_fd);
-        }
+        on_connection(new_fd);
     }
 }
 
@@ -171,30 +161,10 @@ int Server::accept_connection() const {
 }
 
 /**
- * returns true when there is more data to receive
+ * Can be overridden by children
+ * @param fd - the file descriptor for the client
  */
-bool Server::receive_from_fd(int new_fd) {
-    char buf[MAXDATASIZE];
-    auto bytes_to_send = recv(new_fd, buf, MAXDATASIZE - 1, 0);
-
-    if (bytes_to_send == -1) {
-        perror("recv");
-        exit(1);
-    } else if (bytes_to_send == 0) {
-        return false;  // client has closed the connection
-    } else {
-        buf[bytes_to_send] = '\0';  // null terminate the buffer
-
-        auto send_res = send(new_fd, buf, bytes_to_send, 0);
-        if (send_res == -1) {
-            perror("send");
-        } else if (send_res < bytes_to_send) {
-            fprintf(stderr, "could not send all bytes of message. sent %ld/%ld\n",
-                    send_res, bytes_to_send);
-            fprintf(stderr, "TODO: Handle unfinished send\n");
-        }
-
-        printf("server: received '%s'\n", buf);
-        return true;
-    }
+void Server::on_connection(int fd) {
+    std::cout << "Connected!\n";
+    close(fd);
 }

@@ -18,7 +18,7 @@
 /**
  * Defines for configuration
  */
-#define PORT "3495"      // the port users will be connecting to
+#define PORT "3493"      // the port users will be connecting to
 #define BACKLOG 10       // how many pending connections queue will hold
 
 Server::Server() { this->sockfd = get_socket_file_descriptor(); }
@@ -54,7 +54,7 @@ struct addrinfo *Server::get_address_info() {
     /**
      * Get address info:
      * (Note this is still mostly taken from Beej
-     * (https://beej.us/guide/bgnet/examples/))
+     * (https://beej.us/guide/bgnet/examples/)
      */
     struct addrinfo hints{};
     struct addrinfo *servinfo;

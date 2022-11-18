@@ -25,32 +25,33 @@
 void MessageServer::on_connection(int fd) {
     std::cout << "Connected!!!\n";
 
-    try {
-        const std::string username = get_username(fd);
-        std::cout << "'" << username << "' joined the chat." << std::endl;
-        // TODO: Create helper function for generation of welcome message
-        send_message_to_fd("Welcome " + username + "!\n", fd);
+    std::thread t([this, fd]() {
+        try {
+            const std::string username = get_username(fd);
+            std::cout << "'" << username << "' joined the chat." << std::endl;
+            // TODO: Create helper function for generation of welcome message
+            send_message_to_fd("Welcome " + username + "!\n", fd);
+        } catch (connection_terminated &e) {
+            std::cerr << "Error getting username. Connection terminated." << std::endl;
+            return;
+        }
 
         connections_mutex.lock();
         connections.insert(fd);
         connections_mutex.unlock();
 
-        std::thread t([this, fd]() {
-            while (handle_connection(fd));  // receive packets from client
+        // after username is obtained, handle messages
+        while (handle_connection(fd));  // receive packets from client
 
-            connections_mutex.lock();
-            std::cout << "client '" << fd << "' has closed the connection.\n";
-            connections.erase(fd);
-            connections_mutex.unlock();
-            close(fd);
-        });
-        t.detach();
-        // `t` will either die when the connection is closed,
-        // or when the server is killed.
-    } catch (connection_terminated &e) {
-        std::cerr << "Error getting username. Connection terminated." << std::endl;
-        return;
-    }
+        connections_mutex.lock();
+        std::cout << "client '" << fd << "' has closed the connection.\n";
+        connections.erase(fd);
+        connections_mutex.unlock();
+        close(fd);
+    });
+    t.detach();
+    // `t` will either die when the connection is closed,
+    // or when the server is killed.
 }
 
 /**
@@ -122,9 +123,10 @@ bool buff_contains(const char *buf, long len, char c) {
 }
 
 const std::string MessageServer::get_username(int fd) {
+    // TODO: make sure two people can't have the same username
     const char *message = "Welcome to Zack Sargent's Server!\n"
                           "Please enter your username: ";
-    const char *warning_message = "Please enter a username in ascii less than "
+    const char *warning_message = "Please enter an alphanumeric username less than "
                                   TOSTRING(USERNAME_LEN)
                                   " characters!\n"
                                   "Please enter your username: ";

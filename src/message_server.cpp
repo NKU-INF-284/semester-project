@@ -18,6 +18,8 @@
 
 #define MAXDATASIZE 256  // max number of bytes we can get at once
 #define USERNAME_LEN 10
+#define VAL(x) #x
+#define TOSTRING(str) VAL(str)
 
 
 void MessageServer::on_connection(int fd) {
@@ -105,28 +107,69 @@ bool MessageServer::send_buffer(int fd, const char *buf, size_t bytes_to_send) {
 
 //bool valid_username()
 
+bool is_invalid(char c) {
+    bool is_alpha = (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
+    bool is_numeric = c >= 48 && c <= 57;
+    bool is_alphanumeric = is_alpha || is_numeric;
+    return std::isspace(c) || !is_alphanumeric;
+}
+
+bool buff_contains(const char *buf, long len, char c) {
+    for (long i = 0; i < len; i++)
+        if (buf[i] == c)
+            return true;
+    return false;
+}
+
 const std::string MessageServer::get_username(int fd) {
-    auto message = "Welcome to Zack Sargent's Server!\n"
-                   "Please enter your username: ";
+    const char *message = "Welcome to Zack Sargent's Server!\n"
+                          "Please enter your username: ";
+    const char *warning_message = "Please enter a username in ascii less than "
+                                  TOSTRING(USERNAME_LEN)
+                                  " characters!\n"
+                                  "Please enter your username: ";
 
     send_message_to_fd(message, fd);
-    char username[USERNAME_LEN + 1];
-    const auto bytes_received = recv(fd, username, USERNAME_LEN, 0);
+    const int null_terminator = 1;
+    const int new_line = 1;
+    const int BUFF_SIZE = USERNAME_LEN + null_terminator + new_line;
+    char username[BUFF_SIZE];
+    bool shouldProcess = true;
+    ssize_t bytes_received;
 
-    if (bytes_received == -1) {
-        perror("recv");
-        throw connection_terminated();
-    } else if (bytes_received == 0) {
-        throw connection_terminated();
+    while (true) {
+        bytes_received = recv(fd, username, BUFF_SIZE, 0);
+        std::cout << "bytes: " << bytes_received << std::endl;
+
+        if (bytes_received > USERNAME_LEN || !shouldProcess) {
+            shouldProcess = buff_contains(username, bytes_received, '\n');
+            if (shouldProcess)
+                send_message_to_fd(warning_message, fd);
+            continue;
+        }
+
+        if (bytes_received == -1) {
+            perror("recv");
+            throw connection_terminated();
+        } else if (bytes_received == 0) {
+            throw connection_terminated();
+        }
+
+        username[bytes_received] = '\0'; // null terminate for string conversion
+
+        std::string name(username);
+
+        name.erase(std::remove_if(name.begin(),
+                                  name.end(),
+                                  is_invalid),
+                   name.end());
+
+        if (name.empty()) {
+            send_message_to_fd(warning_message, fd);
+            continue;
+        }
+
+        return name;
     }
-
-    username[bytes_received] = '\0'; // null terminate for string conversion
-    std::string name(username);
-    name.erase(std::remove_if(name.begin(),
-                              name.end(),
-                              [](unsigned char c) { return std::isspace(c) || !(c >= 0 && c < 128); }),
-               name.end());
-
-    return name;
 }
 

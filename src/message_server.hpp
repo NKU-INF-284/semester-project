@@ -6,7 +6,7 @@
 #define SEMESTER_PROJECT_MESSAGE_SERVER_HPP
 
 
-#include <unordered_set>
+#include <unordered_map>
 #include <mutex>
 #include "server.hpp"
 
@@ -15,7 +15,9 @@ public:
     void on_connection(int) override;
 
 private:
-    bool handle_connection(int);
+    bool handle_connection(int fd, const std::string &username);
+
+    void send_message_to_all(const char *message, int origin, const std::string &username);
 
     static void send_message_to_fd(const std::string &message, int fd);
 
@@ -26,7 +28,7 @@ private:
     // TODO: turn into a map from username to fd
     // OR: std::unordered_set<std::pair<std::string, int>>> connections;
     // Consider defining struct for std::pair<std::string, int>
-    std::unordered_set<int> connections;
+    std::unordered_map<std::string, int> connections;
     std::mutex connections_mutex;
 };
 

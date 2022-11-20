@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <string>
+#include <sstream>
 #include <string_view>
 #include <cerrno>
 #include <netdb.h>
@@ -31,23 +32,23 @@ void MessageServer::on_connection(int fd) {
             std::cout << "'" << username << "' joined the chat." << std::endl;
             // TODO: Create helper function for generation of welcome message
             send_message_to_fd("Welcome " + username + "!\n", fd);
+
+            connections_mutex.lock();
+            connections[username] = fd;
+            connections_mutex.unlock();
+
+            // after username is obtained, handle messages
+            while (handle_connection(fd, username));  // receive packets from client
+
+            connections_mutex.lock();
+            std::cout << "client '" << fd << "' has closed the connection.\n";
+            connections.erase(username);
+            connections_mutex.unlock();
+            close(fd);
         } catch (connection_terminated &e) {
             std::cerr << "Error getting username. Connection terminated." << std::endl;
             return;
         }
-
-        connections_mutex.lock();
-        connections.insert(fd);
-        connections_mutex.unlock();
-
-        // after username is obtained, handle messages
-        while (handle_connection(fd));  // receive packets from client
-
-        connections_mutex.lock();
-        std::cout << "client '" << fd << "' has closed the connection.\n";
-        connections.erase(fd);
-        connections_mutex.unlock();
-        close(fd);
     });
     t.detach();
     // `t` will either die when the connection is closed,
@@ -57,7 +58,7 @@ void MessageServer::on_connection(int fd) {
 /**
  * returns true when there is more data to receive
  */
-bool MessageServer::handle_connection(int fd) {
+bool MessageServer::handle_connection(int fd, const std::string &username) {
     char buf[MAXDATASIZE];
     auto bytes_to_send = recv(fd, buf, MAXDATASIZE - 1, 0);
 
@@ -72,18 +73,13 @@ bool MessageServer::handle_connection(int fd) {
 
         bool res = true;
         connections_mutex.lock();
-        // TODO: break into "Send to all" function (should overload for std::string and const char*)
-        for (int conn: connections) {
-            if (conn != fd) {
-                res = send_buffer(conn, buf, bytes_to_send);
-                std::cout << "sent to '" << conn << "'\n";
-            }
-        }
+        send_message_to_all(buf, fd, username);
         printf("server: received '%s'\n", buf);
         connections_mutex.unlock();
         return res;
     }
 }
+
 
 void MessageServer::send_message_to_fd(const std::string &message, int fd) {
     send_buffer(fd, message.data(), message.size());
@@ -172,6 +168,28 @@ const std::string MessageServer::get_username(int fd) {
         }
 
         return name;
+    }
+}
+
+void MessageServer::send_message_to_all(const char *message, int origin, const std::string &username) {
+    // build message
+    std::stringstream msg("");
+    msg << "<";
+    msg << username;
+    msg << "> ";
+    msg << message;
+    // append newline if needed
+    msg.seekg(-1, std::ios::end);
+    char last_char;
+    msg >> last_char;
+    if (last_char != '\n')
+        msg << '\n';
+
+    for (auto [_, conn]: connections) {
+        if (conn != origin) {
+            send_message_to_fd(msg.str(), conn);
+            std::cout << "sent to '" << conn << "' (" << username << ")\n";
+        }
     }
 }
 

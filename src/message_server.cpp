@@ -73,7 +73,7 @@ bool MessageServer::handle_connection(int fd, const std::string &username) {
 
         bool res = true;
         connections_mutex.lock();
-        send_message_to_all(buf, fd, username);
+        send_message_to_all(std::string(buf), fd, username);
         printf("server: received '%s'\n", buf);
         connections_mutex.unlock();
         return res;
@@ -108,7 +108,17 @@ bool is_invalid(char c) {
     bool is_alpha = (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
     bool is_numeric = c >= 48 && c <= 57;
     bool is_alphanumeric = is_alpha || is_numeric;
-    return std::isspace(c) || !is_alphanumeric;
+    return !is_alphanumeric;
+}
+
+bool is_invalid_username(char c) {
+    return std::isspace(c) || is_invalid(c);
+}
+
+bool is_invalid_message(char c) {
+    if (std::isspace(c))
+        return false;
+    else return is_invalid(c);
 }
 
 bool buff_contains(const char *buf, long len, char c) {
@@ -120,6 +130,7 @@ bool buff_contains(const char *buf, long len, char c) {
 
 const std::string MessageServer::get_username(int fd) {
     // TODO: make sure two people can't have the same username
+    // TODO: wait for newline
     const char *message = "Welcome to Zack Sargent's Server!\n"
                           "Please enter your username: ";
     const char *warning_message = "Please enter an alphanumeric username less than "
@@ -159,7 +170,7 @@ const std::string MessageServer::get_username(int fd) {
 
         name.erase(std::remove_if(name.begin(),
                                   name.end(),
-                                  is_invalid),
+                                  is_invalid_username),
                    name.end());
 
         if (name.empty()) {
@@ -171,7 +182,14 @@ const std::string MessageServer::get_username(int fd) {
     }
 }
 
-void MessageServer::send_message_to_all(const char *message, int origin, const std::string &username) {
+void MessageServer::send_message_to_all(std::string message, int origin, const std::string &username) {
+    message.erase(std::remove_if(message.begin(),
+                                 message.end(),
+                                 is_invalid_message),
+                  message.end());
+    if (message.empty())
+        return;
+
     // build message
     std::stringstream msg("");
     msg << "<";
@@ -179,10 +197,7 @@ void MessageServer::send_message_to_all(const char *message, int origin, const s
     msg << "> ";
     msg << message;
     // append newline if needed
-    msg.seekg(-1, std::ios::end);
-    char last_char;
-    msg >> last_char;
-    if (last_char != '\n')
+    if (message.back() != '\n')
         msg << '\n';
 
     for (auto [_, conn]: connections) {

@@ -17,7 +17,7 @@ public:
 private:
     bool handle_connection(int fd, const std::string &username);
 
-    void send_message_to_all(const char *message, int origin, const std::string &username);
+    void send_message_to_all(std::string message, int origin, const std::string &username);
 
     static void send_message_to_fd(const std::string &message, int fd);
 

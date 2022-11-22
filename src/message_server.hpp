@@ -12,7 +12,7 @@
 
 class MessageServer : public Server {
 public:
-    void on_connection(int) override;
+    void on_connection(int);
 
 private:
     bool handle_connection(int fd, const std::string &username);

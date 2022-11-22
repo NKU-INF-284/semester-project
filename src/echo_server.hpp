@@ -5,7 +5,7 @@
 
 class EchoServer : public Server {
 public:
-    void on_connection(int) override;
+    void on_connection(int);
 private:
     static bool receive_from_fd(int);
 };

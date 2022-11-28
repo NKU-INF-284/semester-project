@@ -239,14 +239,14 @@ void MessageServer::welcome_user(int fd, const std::string &username) {
             ss << "There are " + std::to_string(num_users) + " other users online right now:\n";
 
         for (auto [name, _]: connections) {
-            ss << "\t -" + name + "\n";
+            ss << "\t - " + name + "\n";
         }
     }
 
     ss << "To send a message, type it out, then press enter.\n"
           "Have fun!\n";
     ss << line;
-    ss << "\n\n\n";
+    ss << "\n";
     send_message_to_fd(ss.str(), fd);
     connections_mutex.unlock();
 }

@@ -36,6 +36,7 @@ void MessageServer::on_connection(int fd) {
             connections_mutex.lock();
             connections[username] = fd;
             connections_mutex.unlock();
+            send_message_to_all("\"" + username + "\" has joined the chat.", fd, "server");
 
             // after username is obtained, handle messages
             while (handle_connection(fd, username));  // receive packets from client
@@ -45,6 +46,7 @@ void MessageServer::on_connection(int fd) {
             connections.erase(username);
             connections_mutex.unlock();
             close(fd);
+            send_message_to_all("\"" + username + "\" has left the chat.", -1, "server");
         } catch (connection_terminated &e) {
             std::cerr << "Error getting username. Connection terminated." << std::endl;
             return;
@@ -105,14 +107,14 @@ bool MessageServer::send_buffer(int fd, const char *buf, size_t bytes_to_send) {
 //bool valid_username()
 
 bool is_invalid(char c) {
-    bool is_alpha = (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
-    bool is_numeric = c >= 48 && c <= 57;
-    bool is_alphanumeric = is_alpha || is_numeric;
-    return !is_alphanumeric;
+    return !std::isprint(c);
 }
 
 bool is_invalid_username(char c) {
-    return std::isspace(c) || is_invalid(c);
+    bool is_alpha = (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
+    bool is_numeric = c >= 48 && c <= 57;
+    bool is_alphanumeric = is_alpha || is_numeric;
+    return std::isspace(c) || !is_alphanumeric;
 }
 
 bool is_invalid_message(char c) {
@@ -187,7 +189,7 @@ void MessageServer::send_message_to_all(std::string message, int origin, const s
                                  message.end(),
                                  is_invalid_message),
                   message.end());
-    if (message.empty())
+    if (message.empty() || message == "\n")
         return;
 
     // build message

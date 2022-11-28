@@ -23,7 +23,7 @@ private:
 
     static bool send_buffer(int fd, const char *buf, size_t bytes_to_send);
 
-    static const std::string get_username(int fd);
+    std::string get_username(int fd);
 
     // TODO: turn into a map from username to fd
     // OR: std::unordered_set<std::pair<std::string, int>>> connections;

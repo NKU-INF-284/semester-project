@@ -130,7 +130,7 @@ bool buff_contains(const char *buf, long len, char c) {
     return false;
 }
 
-const std::string MessageServer::get_username(int fd) {
+std::string MessageServer::get_username(int fd) {
     // TODO: make sure two people can't have the same username
     // TODO: wait for newline
     const char *message = "Welcome to Zack Sargent's Server!\n"
@@ -139,6 +139,8 @@ const std::string MessageServer::get_username(int fd) {
                                   TOSTRING(USERNAME_LEN)
                                   " characters!\n"
                                   "Please enter your username: ";
+    const char *name_in_use_message = "That username is currently in use! Please try again.\n"
+                                      "Please enter your username: ";
 
     send_message_to_fd(message, fd);
     const int null_terminator = 1;
@@ -149,6 +151,7 @@ const std::string MessageServer::get_username(int fd) {
     ssize_t bytes_received;
 
     while (true) {
+        start:
         bytes_received = recv(fd, username, BUFF_SIZE, 0);
         std::cout << "bytes: " << bytes_received << std::endl;
 
@@ -179,6 +182,16 @@ const std::string MessageServer::get_username(int fd) {
             send_message_to_fd(warning_message, fd);
             continue;
         }
+
+        connections_mutex.lock();
+        for (auto [existing_username, _]: connections) {
+            if (name == existing_username) {
+                send_message_to_fd(name_in_use_message, fd);
+                connections_mutex.unlock();
+                goto start; // goto is needed to break from nested loop.
+            }
+        }
+        connections_mutex.unlock();
 
         return name;
     }

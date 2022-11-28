@@ -30,12 +30,13 @@ void MessageServer::on_connection(int fd) {
         try {
             const std::string username = get_username(fd);
             std::cout << "'" << username << "' joined the chat." << std::endl;
-            // TODO: Create helper function for generation of welcome message
-            send_message_to_fd("Welcome " + username + "!\n", fd);
+
+            welcome_user(fd, username);
 
             connections_mutex.lock();
             connections[username] = fd;
             connections_mutex.unlock();
+
             send_message_to_all("\"" + username + "\" has joined the chat.", fd, "server");
 
             // after username is obtained, handle messages
@@ -103,8 +104,6 @@ bool MessageServer::send_buffer(int fd, const char *buf, size_t bytes_to_send) {
     }
     return true;
 }
-
-//bool valid_username()
 
 bool is_invalid(char c) {
     return !std::isprint(c);
@@ -221,5 +220,34 @@ void MessageServer::send_message_to_all(std::string message, int origin, const s
             std::cout << "sent to '" << conn << "' (" << username << ")\n";
         }
     }
+}
+
+void MessageServer::welcome_user(int fd, const std::string &username) {
+    connections_mutex.lock();
+    auto num_users = connections.size();
+    std::string line = std::string(10, '*');
+    std::stringstream ss("\n");
+    ss << line;
+    ss << "\nWelcome " + username + "!\n";
+
+    if (num_users == 0) {
+        ss << "There are no other users online right now.\n";
+    } else {
+        if (num_users == 1)
+            ss << "There is " + std::to_string(num_users) + " other user online right now:\n";
+        else
+            ss << "There are " + std::to_string(num_users) + " other users online right now:\n";
+
+        for (auto [name, _]: connections) {
+            ss << "\t -" + name + "\n";
+        }
+    }
+
+    ss << "To send a message, type it out, then press enter.\n"
+          "Have fun!\n";
+    ss << line;
+    ss << "\n\n\n";
+    send_message_to_fd(ss.str(), fd);
+    connections_mutex.unlock();
 }
 

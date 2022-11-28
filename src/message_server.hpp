@@ -25,10 +25,10 @@ private:
 
     std::string get_username(int fd);
 
-    // TODO: turn into a map from username to fd
-    // OR: std::unordered_set<std::pair<std::string, int>>> connections;
-    // Consider defining struct for std::pair<std::string, int>
+    void welcome_user(int fd, const std::string& username);
+
     std::unordered_map<std::string, int> connections;
+    // could also be: std::unordered_set<std::pair<std::string, int>>> connections;
     std::mutex connections_mutex;
 };
 

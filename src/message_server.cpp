@@ -155,7 +155,7 @@ std::string MessageServer::get_username(int fd) {
 
         connections_mutex.lock();
         for (auto [existing_username, _]: connections) {
-            if (name == existing_username) {
+            if (name == existing_username || name == "server") {
                 send_message_to_fd(name_in_use_message, fd);
                 connections_mutex.unlock();
                 goto start; // goto is needed to break from nested loop.

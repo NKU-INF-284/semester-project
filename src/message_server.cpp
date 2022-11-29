@@ -1,17 +1,12 @@
 #include <algorithm>
-#include <arpa/inet.h>
 #include <string>
 #include <sstream>
-#include <string_view>
-#include <cerrno>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <sys/socket.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #include <thread>
 
@@ -112,13 +107,6 @@ bool is_invalid_message(char c) {
     else return is_invalid(c);
 }
 
-bool buff_contains(const char *buf, long len, char c) {
-    for (long i = 0; i < len; i++)
-        if (buf[i] == c)
-            return true;
-    return false;
-}
-
 std::string MessageServer::get_username(int fd) {
     const char *message = "Welcome to Group 4's amazing server!\n"
                           "Please enter your username: ";
@@ -133,9 +121,6 @@ std::string MessageServer::get_username(int fd) {
     const int null_terminator = 1;
     const int new_line = 1;
     const int BUFF_SIZE = USERNAME_LEN + null_terminator + new_line;
-    char username[BUFF_SIZE];
-    bool shouldProcess = true;
-    ssize_t bytes_received;
 
     while (true) {
         start:
@@ -174,7 +159,7 @@ void MessageServer::send_message_to_all(std::string message, int origin, const s
                                  message.end(),
                                  is_invalid_message),
                   message.end());
-    if (message.empty() || message == "\n")
+    if (message.empty() || std::all_of(message.begin(), message.end(), isspace))
         return;
 
     // build message
@@ -230,7 +215,7 @@ void MessageServer::welcome_user(int fd, const std::string &username) {
  * @param buff_size
  * @return a string ending in a new line;
  */
-std::string MessageServer::get_line(int fd, int buff_size) {
+std::string MessageServer::get_line(int fd, const int buff_size) {
     std::string line;
     char buf[buff_size];
 

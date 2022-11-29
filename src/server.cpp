@@ -18,7 +18,7 @@
 /**
  * Defines for configuration
  */
-#define PORT "3490"      // the port users will be connecting to
+#define PORT "2840"      // the port users will be connecting to
 #define BACKLOG 10       // how many pending connections queue will hold
 
 Server::Server() { this->sockfd = get_socket_file_descriptor(); }

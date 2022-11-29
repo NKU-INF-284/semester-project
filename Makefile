@@ -1,6 +1,6 @@
 OUTDIR  := build
 OUTFILE := $(OUTDIR)/server.out
-OPTS    := -Wall -Wpedantic -Wextra
+OPTS    := -Wall -Wpedantic -Wextra -O2
 SRC     := src
 FILES   := $(shell find $(SRC) -name *.cpp)
 

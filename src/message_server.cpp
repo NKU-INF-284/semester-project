@@ -22,13 +22,12 @@
 #define VAL(x) #x
 #define TOSTRING(str) VAL(str)
 
-
 void MessageServer::on_connection(int fd) {
     std::cout << "Connected!!!\n";
 
     std::thread t([this, fd]() {
         try {
-            const std::string username = get_username(fd);
+            auto username = get_username(fd);
             std::cout << "'" << username << "' joined the chat." << std::endl;
 
             welcome_user(fd, username);
@@ -62,24 +61,15 @@ void MessageServer::on_connection(int fd) {
  * returns true when there is more data to receive
  */
 bool MessageServer::handle_connection(int fd, const std::string &username) {
-    char buf[MAXDATASIZE];
-    auto bytes_to_send = recv(fd, buf, MAXDATASIZE - 1, 0);
-
-    if (bytes_to_send == -1) {
-        perror("recv");
-        exit(1);
-    } else if (bytes_to_send == 0) {
-        return false;  // client has closed the connection
-    } else {
-        // TODO: Filter buffer
-        buf[bytes_to_send] = '\0';  // null terminate the buffer
-
-        bool res = true;
+    try {
+        std::string line = get_line(fd, MAXDATASIZE);
         connections_mutex.lock();
-        send_message_to_all(std::string(buf), fd, username);
-        printf("server: received '%s'\n", buf);
+        send_message_to_all(line, fd, username);
+        printf("server: received '%s'\n", line.c_str());
         connections_mutex.unlock();
-        return res;
+        return true;
+    } catch (connection_terminated &c) {
+        return false;
     }
 }
 
@@ -130,8 +120,6 @@ bool buff_contains(const char *buf, long len, char c) {
 }
 
 std::string MessageServer::get_username(int fd) {
-    // TODO: make sure two people can't have the same username
-    // TODO: wait for newline
     const char *message = "Welcome to Zack Sargent's Server!\n"
                           "Please enter your username: ";
     const char *warning_message = "Please enter an alphanumeric username less than "
@@ -151,26 +139,11 @@ std::string MessageServer::get_username(int fd) {
 
     while (true) {
         start:
-        bytes_received = recv(fd, username, BUFF_SIZE, 0);
-        std::cout << "bytes: " << bytes_received << std::endl;
-
-        if (bytes_received > USERNAME_LEN || !shouldProcess) {
-            shouldProcess = buff_contains(username, bytes_received, '\n');
-            if (shouldProcess)
-                send_message_to_fd(warning_message, fd);
+        std::string name = get_line(fd, BUFF_SIZE + 1);
+        if (name.size() > USERNAME_LEN) {
+            send_message_to_fd(warning_message, fd);
             continue;
         }
-
-        if (bytes_received == -1) {
-            perror("recv");
-            throw connection_terminated();
-        } else if (bytes_received == 0) {
-            throw connection_terminated();
-        }
-
-        username[bytes_received] = '\0'; // null terminate for string conversion
-
-        std::string name(username);
 
         name.erase(std::remove_if(name.begin(),
                                   name.end(),
@@ -225,8 +198,8 @@ void MessageServer::send_message_to_all(std::string message, int origin, const s
 void MessageServer::welcome_user(int fd, const std::string &username) {
     connections_mutex.lock();
     auto num_users = connections.size();
-    std::string line = std::string(10, '*');
-    std::stringstream ss("\n");
+    const std::string line = std::string(10, '*');
+    std::ostringstream ss("\n");
     ss << line;
     ss << "\nWelcome " + username + "!\n";
 
@@ -251,3 +224,29 @@ void MessageServer::welcome_user(int fd, const std::string &username) {
     connections_mutex.unlock();
 }
 
+/**
+ * gets a line from the client
+ * @param fd
+ * @param buff_size
+ * @return a string ending in a new line;
+ */
+std::string MessageServer::get_line(int fd, int buff_size) {
+    std::string line;
+    char buf[buff_size];
+
+    do {
+        auto bytes_to_send = recv(fd, buf, buff_size - 1, 0);
+
+        if (bytes_to_send == -1) {
+            perror("recv");
+            exit(1);
+        } else if (bytes_to_send == 0) {
+            throw connection_terminated();
+        } else {
+            buf[bytes_to_send] = '\0';  // null terminate the line
+            line.append(std::string(buf));
+        }
+    } while (line.back() != '\n');
+
+    return line;
+}

@@ -12,7 +12,7 @@
 
 class MessageServer : public Server {
 public:
-    void on_connection(int);
+    void on_connection(int) override;
 
 private:
     bool handle_connection(int fd, const std::string &username);
@@ -25,7 +25,9 @@ private:
 
     std::string get_username(int fd);
 
-    void welcome_user(int fd, const std::string& username);
+    void welcome_user(int fd, const std::string &username);
+
+    std::string get_line(int fd, int buff_size);
 
     std::unordered_map<std::string, int> connections;
     // could also be: std::unordered_set<std::pair<std::string, int>>> connections;

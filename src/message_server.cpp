@@ -120,7 +120,7 @@ bool buff_contains(const char *buf, long len, char c) {
 }
 
 std::string MessageServer::get_username(int fd) {
-    const char *message = "Welcome to Zack Sargent's Server!\n"
+    const char *message = "Welcome to Group 4's amazing server!\n"
                           "Please enter your username: ";
     const char *warning_message = "Please enter an alphanumeric username less than "
                                   TOSTRING(USERNAME_LEN)
@@ -244,9 +244,18 @@ std::string MessageServer::get_line(int fd, int buff_size) {
             throw connection_terminated();
         } else {
             buf[bytes_to_send] = '\0';  // null terminate the line
-            line.append(std::string(buf));
+
+            if (bytes_to_send == 1 && buf[0] == 127 /* DELETE */) {
+                if (!line.empty()) {
+                    line.pop_back();
+                    send_message_to_fd("\b\b\b   \b\b\b", fd);
+                }
+                continue;
+            } else {
+                line.append(std::string(buf));
+            }
         }
-    } while (line.back() != '\n');
+    } while (!line.empty() && line.back() != '\n');
 
     return line;
 }

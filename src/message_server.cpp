@@ -69,8 +69,21 @@ bool MessageServer::handle_connection(int fd, const std::string &username) {
 }
 
 
+std::string replace_all(const std::string &s, const std::string &from, const std::string &to) {
+    std::string str(s);
+    if (from.empty())
+        return "";
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+    }
+    return str;
+}
+
 void MessageServer::send_message_to_fd(const std::string &message, int fd) {
-    send_buffer(fd, message.data(), message.size());
+    std::string formatted_message = replace_all(message, "\n", "\r\n");
+    send_buffer(fd, formatted_message.data(), formatted_message.size());
 }
 
 /**

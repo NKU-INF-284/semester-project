@@ -210,7 +210,7 @@ void MessageServer::welcome_user(int fd, const std::string &username) {
         ss << "There are no other users online right now.\n";
     } else {
         if (num_users == 1)
-            ss << "There is 1 other user online right now.\n";
+            ss << "There is 1 other user online right now:\n";
         else
             ss << "There are " + std::to_string(num_users) + " other users online right now:\n";
 

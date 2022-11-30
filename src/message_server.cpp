@@ -21,8 +21,9 @@ void MessageServer::on_connection(int fd) {
     std::cout << "Connected!!!\n";
 
     std::thread t([this, fd]() {
+        std::string username = "";
         try {
-            auto username = get_username(fd);
+            username = get_username(fd);
             std::cout << "'" << username << "' joined the chat." << std::endl;
 
             welcome_user(fd, username);
@@ -43,7 +44,16 @@ void MessageServer::on_connection(int fd) {
             close(fd);
             send_message_to_all("\"" + username + "\" has left the chat.", -1, "server");
         } catch (connection_terminated &e) {
-            std::cerr << "Error getting username. Connection terminated." << std::endl;
+            if (username.empty()) {
+                std::cerr << "client '" << fd << "' terminated and is being cleaned up\n";
+            } else {
+                std::cerr << "client '" << username << "' (" << fd << ") terminated and is being cleaned up\n";
+                connections_mutex.lock();
+                connections.erase(username);
+                connections_mutex.unlock();
+            }
+
+            close(fd);
             return;
         }
     });
@@ -244,16 +254,7 @@ std::string MessageServer::get_line(int fd, const int buff_size) {
         if (bytes_to_send == -1) {
             std::cerr << "received -1 from fd: " << fd << std::endl;
             perror("recv");
-            connections_mutex.lock();
-            for (auto [username, conn_fd]: connections) { // find and delete one that had issue
-                if (fd == conn_fd) {
-                    connections.erase(username);
-                    break;
-                }
-            }
-            connections_mutex.unlock();
-            close(fd);
-            std::terminate();
+            throw connection_terminated();
         } else if (bytes_to_send == 0) {
             throw connection_terminated();
         } else {

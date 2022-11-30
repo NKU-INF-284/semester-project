@@ -1,6 +1,6 @@
 OUTDIR  := build
 OUTFILE := $(OUTDIR)/server.out
-OPTS    := -Wall -Wpedantic -Wextra -O2
+OPTS    := -Wall -Wpedantic -Wextra -O2 -pthread
 SRC     := src
 FILES   := $(shell find $(SRC) -name *.cpp)
 
@@ -14,3 +14,6 @@ run: main
 
 clean:
 	rm -rf $(OUTDIR)
+
+reload: main
+	sudo systemctl daemon-reload && sudo systemctl restart tcp-server.service

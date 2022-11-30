@@ -248,10 +248,17 @@ std::string MessageServer::get_line(int fd, const int buff_size) {
         } else {
             buf[bytes_to_send] = '\0';  // null terminate the line
 
+            // handle backspace / delete
             if (bytes_to_send == 1 && buf[0] == 127 /* DELETE */) {
                 if (!line.empty()) {
                     line.pop_back();
                     send_message_to_fd("\b\b\b   \b\b\b", fd);
+                }
+                continue;
+            } else if (bytes_to_send == 1 && buf[0] == '\b' /*backspace*/) {
+                if (!line.empty()) {
+                    line.pop_back();
+                    send_message_to_fd(" \b", fd);
                 }
                 continue;
             } else {

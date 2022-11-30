@@ -27,7 +27,7 @@ private:
 
     void welcome_user(int fd, const std::string &username);
 
-    static std::string get_line(int fd, int buff_size);
+    std::string get_line(int fd, int buff_size);
 
     std::unordered_map<std::string, int> connections;
     // could also be: std::unordered_set<std::pair<std::string, int>>> connections;

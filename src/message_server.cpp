@@ -92,6 +92,7 @@ void MessageServer::send_message_to_fd(const std::string &message, int fd) {
 bool MessageServer::send_buffer(int fd, const char *buf, size_t bytes_to_send) {
     auto send_res = send(fd, buf, bytes_to_send, 0);
     if (send_res == -1) {
+        std::cerr << "got -1 sending to fd: " << fd << std::endl;
         perror("send");
         return false;
     } else if (send_res < bytes_to_send) {
@@ -241,8 +242,18 @@ std::string MessageServer::get_line(int fd, const int buff_size) {
         auto bytes_to_send = recv(fd, buf, buff_size - 1, 0);
 
         if (bytes_to_send == -1) {
+            std::cerr << "received -1 from fd: " << fd << std::endl;
             perror("recv");
-            exit(1);
+            connections_mutex.lock();
+            for (auto [username, conn_fd]: connections) { // find and delete one that had issue
+                if (fd == conn_fd) {
+                    connections.erase(username);
+                    break;
+                }
+            }
+            connections_mutex.unlock();
+            close(fd);
+            std::terminate();
         } else if (bytes_to_send == 0) {
             throw connection_terminated();
         } else {
